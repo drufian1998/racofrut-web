@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  ArrowRight, Building2, Check, ChevronDown, Leaf, Menu, Minus,
+  ArrowRight, Building2, Check, ChevronDown, Leaf, Menu, MessageCircle, Minus,
   PackageCheck, Plus, Search, ShoppingBag, Sparkles, Sprout, Truck,
   UserRound, X,
 } from 'lucide-react'
@@ -27,19 +27,31 @@ const products: Product[] = [
 
 const categories = ['Todo', 'Frutas', 'Verduras', 'Listos para ti']
 const currency = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' })
+const whatsappNumber = '56961137832'
 
 function App() {
   const [category, setCategory] = useState('Todo')
-  const [cart, setCart] = useState<Record<number, number>>({})
+  const [cart, setCart] = useState<Record<number, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('racofrut-cart') ?? '{}')
+    } catch {
+      return {}
+    }
+  })
   const [cartOpen, setCartOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [businessOpen, setBusinessOpen] = useState(false)
+  const [whatsappOpen, setWhatsappOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const filteredProducts = category === 'Todo' ? products : products.filter((product) => product.category === category)
   const cartItems = products.filter((product) => cart[product.id])
   const itemCount = Object.values(cart).reduce((total, quantity) => total + quantity, 0)
   const total = cartItems.reduce((sum, product) => sum + product.price * cart[product.id], 0)
+
+  useEffect(() => {
+    localStorage.setItem('racofrut-cart', JSON.stringify(cart))
+  }, [cart])
 
   const updateCart = (id: number, difference: number) => {
     setCart((current) => {
@@ -54,6 +66,18 @@ function App() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
     setMenuOpen(false)
+  }
+
+  const openWhatsapp = (type: 'order' | 'business') => {
+    const orderLines = cartItems.map((product) => `• ${cart[product.id]} x ${product.name} (${product.unit}) — ${currency.format(product.price * cart[product.id])}`)
+    const message = type === 'business'
+      ? 'Hola Racofrut, quiero cotizar abastecimiento para mi empresa. ¿Me pueden orientar sobre precios, despacho y facturación?'
+      : cartItems.length > 0
+        ? `Hola Racofrut, quiero revisar y confirmar este pedido:\n\n${orderLines.join('\n')}\n\nTotal productos: ${currency.format(total)}\n\nNecesito coordinar despacho y datos de facturación.`
+        : 'Hola Racofrut, quiero hacer un pedido para mi hogar. ¿Me pueden ayudar?'
+
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+    setWhatsappOpen(false)
   }
 
   return (
@@ -141,9 +165,33 @@ function App() {
         <div className="footer-bottom"><span>© 2026 Racofrut</span><span>Privacidad · Términos</span></div>
       </footer>
 
+      {itemCount > 0 && !cartOpen && (
+        <button className="floating-cart" onClick={() => setCartOpen(true)} aria-label={`Ver carrito con ${itemCount} productos`}>
+          <span className="floating-cart-icon"><ShoppingBag /><b>{itemCount}</b></span>
+          <span><small>Tu pedido</small><strong>{currency.format(total)}</strong></span>
+          <span className="floating-cart-action">Revisar <ArrowRight /></span>
+        </button>
+      )}
+
+      <div className={`whatsapp-widget ${whatsappOpen ? 'open' : ''}`}>
+        {whatsappOpen && (
+          <div className="whatsapp-menu" role="dialog" aria-label="Contacto rápido por WhatsApp">
+            <div><span>Respuesta rápida</span><button onClick={() => setWhatsappOpen(false)} aria-label="Cerrar WhatsApp"><X /></button></div>
+            <h3>¿Cómo te ayudamos?</h3>
+            <p>Elige una opción y abriremos WhatsApp con el mensaje preparado.</p>
+            <button onClick={() => openWhatsapp('order')}><ShoppingBag /><span><strong>Pedido particular</strong><small>{itemCount > 0 ? `Enviar carrito · ${currency.format(total)}` : 'Comprar para mi hogar'}</small></span><ArrowRight /></button>
+            <button onClick={() => openWhatsapp('business')}><Building2 /><span><strong>Soy empresa</strong><small>Cotización y facturación</small></span><ArrowRight /></button>
+          </div>
+        )}
+        <button className="whatsapp-trigger" onClick={() => setWhatsappOpen((open) => !open)} aria-label="Contactar por WhatsApp">
+          {whatsappOpen ? <X /> : <MessageCircle />}
+          {!whatsappOpen && <span>¿Necesitas ayuda?</span>}
+        </button>
+      </div>
+
       {menuOpen && <div className="mobile-panel overlay-panel"><button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú"><X /></button><div className="brand"><span className="brand-mark"><Leaf /></span><span>raco<span>frut</span></span></div><nav><button onClick={() => scrollTo('catalogo')}>Productos</button><button onClick={() => scrollTo('temporada')}>Temporada</button><button onClick={() => scrollTo('como-funciona')}>Cómo funciona</button><button onClick={() => { setMenuOpen(false); setBusinessOpen(true) }}>Empresas</button></nav></div>}
 
-      {cartOpen && <><button className="modal-backdrop" onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" /><aside className="cart-drawer"><div className="drawer-header"><div><span>Tu compra</span><h2>Carrito <small>{itemCount} productos</small></h2></div><button className="close-button" onClick={() => setCartOpen(false)}><X /></button></div><div className="cart-content">{cartItems.length === 0 ? <div className="empty-cart"><ShoppingBag /><h3>Tu bolsa está vacía</h3><p>Agrega productos frescos y vuelve por aquí.</p><button className="primary-button" onClick={() => { setCartOpen(false); scrollTo('catalogo') }}>Explorar productos</button></div> : cartItems.map((product) => <div className="cart-item" key={product.id}><img src={product.image} alt="" /><div><h3>{product.name}</h3><span>{product.unit}</span><strong>{currency.format(product.price * cart[product.id])}</strong></div><div className="quantity-control"><button onClick={() => updateCart(product.id, -1)}><Minus /></button><span>{cart[product.id]}</span><button onClick={() => updateCart(product.id, 1)}><Plus /></button></div></div>)}</div>{cartItems.length > 0 && <div className="cart-summary"><div><span>Subtotal</span><strong>{currency.format(total)}</strong></div><small>Despacho calculado al finalizar la compra</small><button className="primary-button">Continuar compra <ArrowRight /></button></div>}</aside></>}
+      {cartOpen && <><button className="modal-backdrop" onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" /><aside className="cart-drawer"><div className="drawer-header"><div><span>Tu compra</span><h2>Carrito <small>{itemCount} productos</small></h2></div><button className="close-button" onClick={() => setCartOpen(false)}><X /></button></div><div className="cart-content">{cartItems.length === 0 ? <div className="empty-cart"><ShoppingBag /><h3>Tu bolsa está vacía</h3><p>Agrega productos frescos y vuelve por aquí.</p><button className="primary-button" onClick={() => { setCartOpen(false); scrollTo('catalogo') }}>Explorar productos</button></div> : cartItems.map((product) => <div className="cart-item" key={product.id}><img src={product.image} alt="" /><div><h3>{product.name}</h3><span>{product.unit}</span><strong>{currency.format(product.price * cart[product.id])}</strong></div><div className="quantity-control"><button onClick={() => updateCart(product.id, -1)}><Minus /></button><span>{cart[product.id]}</span><button onClick={() => updateCart(product.id, 1)}><Plus /></button></div></div>)}</div>{cartItems.length > 0 && <div className="cart-summary"><div><span>Subtotal</span><strong>{currency.format(total)}</strong></div><small>Despacho calculado al finalizar la compra</small><button className="primary-button whatsapp-checkout" onClick={() => openWhatsapp('order')}><MessageCircle /> Confirmar por WhatsApp</button><p>Revisamos disponibilidad, despacho y facturación contigo antes de confirmar.</p></div>}</aside></>}
 
       {businessOpen && <><button className="modal-backdrop" onClick={() => setBusinessOpen(false)} aria-label="Cerrar formulario" /><div className="business-modal" role="dialog" aria-modal="true" aria-labelledby="business-title"><button className="close-button" onClick={() => setBusinessOpen(false)}><X /></button>{submitted ? <div className="success-state"><span><Check /></span><h2>Recibimos tu solicitud</h2><p>Un ejecutivo se pondrá en contacto contigo durante el próximo día hábil.</p><button className="primary-button" onClick={() => { setSubmitted(false); setBusinessOpen(false) }}>Listo</button></div> : <><span className="kicker">RACOFRUT EMPRESAS</span><h2 id="business-title">Hablemos de tu abastecimiento.</h2><p>Cuéntanos lo esencial. Prepararemos una propuesta a la medida de tu operación.</p><form onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}><label>Nombre y empresa<input required placeholder="Ej. Daniela · Café Central" /></label><label>Correo corporativo<input required type="email" placeholder="nombre@empresa.cl" /></label><label>Tipo de negocio<select defaultValue=""><option value="" disabled>Selecciona una opción</option><option>Restaurant o cafetería</option><option>Hotel</option><option>Oficina</option><option>Comercio</option><option>Otro</option></select><ChevronDown /></label><label>¿Qué necesitas?<textarea required placeholder="Volumen aproximado, frecuencia y productos clave" /></label><button className="primary-button" type="submit">Solicitar contacto <ArrowRight /></button></form></>}</div></>}
     </div>
