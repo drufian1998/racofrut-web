@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   ArrowRight, Building2, Check, ChevronDown, Leaf, Menu, MessageCircle, Minus,
   PackageCheck, Plus, Search, ShoppingBag, Sparkles, Sprout, Truck,
-  UserRound, X,
+  X,
 } from 'lucide-react'
 import './App.css'
 
@@ -42,12 +42,20 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [businessOpen, setBusinessOpen] = useState(false)
   const [whatsappOpen, setWhatsappOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [accountMode, setAccountMode] = useState<'login' | 'register'>('login')
+  const [accountSubmitted, setAccountSubmitted] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const filteredProducts = category === 'Todo' ? products : products.filter((product) => product.category === category)
   const cartItems = products.filter((product) => cart[product.id])
   const itemCount = Object.values(cart).reduce((total, quantity) => total + quantity, 0)
   const total = cartItems.reduce((sum, product) => sum + product.price * cart[product.id], 0)
+  const searchResults = searchQuery.trim()
+    ? products.filter((product) => `${product.name} ${product.category} ${product.unit}`.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : products.slice(0, 4)
 
   useEffect(() => {
     localStorage.setItem('racofrut-cart', JSON.stringify(cart))
@@ -66,6 +74,25 @@ function App() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
     setMenuOpen(false)
+  }
+
+  const openSearch = () => {
+    setMenuOpen(false)
+    setAccountOpen(false)
+    setSearchOpen(true)
+  }
+
+  const openAccount = () => {
+    setMenuOpen(false)
+    setSearchOpen(false)
+    setAccountOpen(true)
+  }
+
+  const chooseSearchResult = (product: Product) => {
+    setCategory(product.category)
+    setSearchOpen(false)
+    setSearchQuery('')
+    requestAnimationFrame(() => scrollTo('catalogo'))
   }
 
   const openWhatsapp = (type: 'order' | 'business') => {
@@ -99,8 +126,8 @@ function App() {
           <button className="business-link" onClick={() => setBusinessOpen(true)}>Empresas <Building2 size={16} /></button>
         </nav>
         <div className="header-actions">
-          <button className="icon-button desktop-only" aria-label="Buscar"><Search /></button>
-          <button className="icon-button desktop-only" aria-label="Mi cuenta"><UserRound /></button>
+          <button className="icon-button desktop-only" aria-label="Buscar productos" onClick={openSearch}><Search /></button>
+          <button className="account-trigger desktop-only" aria-label="Mi cuenta" onClick={openAccount}><span className="fruit-avatar mini" aria-hidden="true"><i /><b /><em /></span><span>Mi cuenta</span></button>
           <button className="cart-button" onClick={() => setCartOpen(true)} aria-label={`Carrito, ${itemCount} productos`}><ShoppingBag /><span>Carrito</span><b>{itemCount}</b></button>
         </div>
       </header>
@@ -189,7 +216,11 @@ function App() {
         </button>
       </div>
 
-      {menuOpen && <div className="mobile-panel overlay-panel"><button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú"><X /></button><div className="brand"><span className="brand-mark"><Leaf /></span><span>raco<span>frut</span></span></div><nav><button onClick={() => scrollTo('catalogo')}>Productos</button><button onClick={() => scrollTo('temporada')}>Temporada</button><button onClick={() => scrollTo('como-funciona')}>Cómo funciona</button><button onClick={() => { setMenuOpen(false); setBusinessOpen(true) }}>Empresas</button></nav></div>}
+      {menuOpen && <div className="mobile-panel overlay-panel"><button className="close-button" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú"><X /></button><div className="brand"><span className="brand-mark"><Leaf /></span><span>raco<span>frut</span></span></div><div className="mobile-quick-actions"><button onClick={openSearch}><Search /> Buscar</button><button onClick={openAccount}><span className="fruit-avatar mini" aria-hidden="true"><i /><b /><em /></span> Mi cuenta</button></div><nav><button onClick={() => scrollTo('catalogo')}>Productos</button><button onClick={() => scrollTo('temporada')}>Temporada</button><button onClick={() => scrollTo('como-funciona')}>Cómo funciona</button><button onClick={() => { setMenuOpen(false); setBusinessOpen(true) }}>Empresas</button></nav></div>}
+
+      {searchOpen && <><button className="modal-backdrop search-backdrop" onClick={() => setSearchOpen(false)} aria-label="Cerrar búsqueda" /><section className="search-panel" role="dialog" aria-modal="true" aria-labelledby="search-title"><div className="search-panel-inner"><div className="search-heading"><div><span>ENCUENTRA ALGO FRESCO</span><h2 id="search-title">¿Qué necesitas hoy?</h2></div><button className="close-button" onClick={() => setSearchOpen(false)} aria-label="Cerrar búsqueda"><X /></button></div><label className="search-field"><Search /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Prueba con palta, limón o verduras..." aria-label="Buscar en el catálogo" />{searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Limpiar búsqueda"><X /></button>}</label><div className="search-suggestions"><span>{searchQuery ? `${searchResults.length} resultados` : 'Búsquedas sugeridas'}</span>{!searchQuery && <div><button onClick={() => setSearchQuery('Frutas')}>Frutas</button><button onClick={() => setSearchQuery('Verduras')}>Verduras</button><button onClick={() => setSearchQuery('kilo')}>Por kilo</button></div>}</div><div className="search-results">{searchResults.length > 0 ? searchResults.map((product) => <button key={product.id} onClick={() => chooseSearchResult(product)}><img src={product.image} alt="" /><span><small>{product.category}</small><strong>{product.name}</strong><em>{product.unit}</em></span><b>{currency.format(product.price)}</b><ArrowRight /></button>) : <div className="search-empty"><Search /><strong>No encontramos “{searchQuery}”</strong><span>Prueba otra palabra o escríbenos por WhatsApp.</span></div>}</div></div></section></>}
+
+      {accountOpen && <><button className="modal-backdrop" onClick={() => setAccountOpen(false)} aria-label="Cerrar cuenta" /><aside className="account-drawer" role="dialog" aria-modal="true" aria-labelledby="account-title"><button className="close-button" onClick={() => setAccountOpen(false)} aria-label="Cerrar cuenta"><X /></button><div className="account-hero"><div className="fruit-avatar large" aria-hidden="true"><i /><b /><em /></div><div><span>HOLA, SOY PALTITA</span><h2 id="account-title">Tu frescura, a tu manera.</h2><p>Guardo tus favoritos y hago que repetir tu compra sea mucho más simple.</p></div></div>{accountSubmitted ? <div className="account-success"><span><Check /></span><h3>¡Qué bueno tenerte aquí!</h3><p>Esta demostración ya tiene listo el flujo visual. La cuenta real se conectará al sistema de clientes de Racofrut.</p><button className="primary-button" onClick={() => { setAccountSubmitted(false); setAccountOpen(false) }}>Seguir comprando</button></div> : <><div className="account-tabs"><button className={accountMode === 'login' ? 'active' : ''} onClick={() => setAccountMode('login')}>Ingresar</button><button className={accountMode === 'register' ? 'active' : ''} onClick={() => setAccountMode('register')}>Crear cuenta</button></div><form className="account-form" onSubmit={(event) => { event.preventDefault(); setAccountSubmitted(true) }}>{accountMode === 'register' && <label>Nombre<input required placeholder="¿Cómo te llamas?" /></label>}<label>Correo electrónico<input required type="email" placeholder="tu@email.cl" /></label><label>Contraseña<input required type="password" placeholder="Mínimo 8 caracteres" minLength={8} /></label>{accountMode === 'login' && <button type="button" className="forgot-link">Olvidé mi contraseña</button>}<button className="primary-button" type="submit">{accountMode === 'login' ? 'Entrar a mi cuenta' : 'Crear mi cuenta'} <ArrowRight /></button></form><div className="account-benefits"><div><Check /><span><strong>Repite en un toque</strong><small>Tus pedidos siempre a mano</small></span></div><div><Check /><span><strong>Favoritos de verdad</strong><small>Guarda lo que más compras</small></span></div><div><Check /><span><strong>Despacho más rápido</strong><small>Direcciones y datos guardados</small></span></div></div></>}</aside></>}
 
       {cartOpen && <><button className="modal-backdrop" onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" /><aside className="cart-drawer"><div className="drawer-header"><div><span>Tu compra</span><h2>Carrito <small>{itemCount} productos</small></h2></div><button className="close-button" onClick={() => setCartOpen(false)}><X /></button></div><div className="cart-content">{cartItems.length === 0 ? <div className="empty-cart"><ShoppingBag /><h3>Tu bolsa está vacía</h3><p>Agrega productos frescos y vuelve por aquí.</p><button className="primary-button" onClick={() => { setCartOpen(false); scrollTo('catalogo') }}>Explorar productos</button></div> : cartItems.map((product) => <div className="cart-item" key={product.id}><img src={product.image} alt="" /><div><h3>{product.name}</h3><span>{product.unit}</span><strong>{currency.format(product.price * cart[product.id])}</strong></div><div className="quantity-control"><button onClick={() => updateCart(product.id, -1)}><Minus /></button><span>{cart[product.id]}</span><button onClick={() => updateCart(product.id, 1)}><Plus /></button></div></div>)}</div>{cartItems.length > 0 && <div className="cart-summary"><div><span>Subtotal</span><strong>{currency.format(total)}</strong></div><small>Despacho calculado al finalizar la compra</small><button className="primary-button whatsapp-checkout" onClick={() => openWhatsapp('order')}><MessageCircle /> Confirmar por WhatsApp</button><p>Revisamos disponibilidad, despacho y facturación contigo antes de confirmar.</p></div>}</aside></>}
 
