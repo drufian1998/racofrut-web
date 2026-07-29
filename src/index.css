@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+
+:root {
+  --forest: #103f2e;
+  --forest-dark: #082c21;
+  --leaf: #3c864c;
+  --lime: #d7ed83;
+  --coral: #e8674d;
+  --yellow: #f5c451;
+  --paper: #f7f5ee;
+  --white: #fffefa;
+  --ink: #17342b;
+  --muted: #687a73;
+  --line: #dfe2d8;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: var(--paper); }
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+h1, h2, h3, p { margin-top: 0; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+body:has(.modal-backdrop), body:has(.overlay-panel) { overflow: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-content > * { animation: reveal .7s both; }
+  .hero-content > :nth-child(2) { animation-delay: .08s; }
+  .hero-content > :nth-child(3) { animation-delay: .16s; }
+  .hero-content > :nth-child(4) { animation-delay: .24s; }
+  .hero-content > :nth-child(5) { animation-delay: .32s; }
+}
+
+@keyframes reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
